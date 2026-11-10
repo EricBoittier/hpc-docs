@@ -1,6 +1,6 @@
-name: lammps-metatrain
+name: lammps-metatomic
 store: /user-environment
-description: LAMMPS with metatrain software stack support
+description: LAMMPS with metatomic (ML-METATOMIC) support
 spack:
   repo: https://github.com/spack/spack.git
   commit: v1.1.1

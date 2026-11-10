@@ -1,6 +1,6 @@
 # Using `metatrain` on Alps
 
-Last update 2025-09-11.
+Last update 2026-11-10.
 
 > [!warning]
 > Efficient distributed training on Alps requires [NCCL](https://docs.cscs.ch/software/communication/nccl/) over the high-speed Slingshot 11 network. Therefore, careful setup is required.
@@ -14,11 +14,11 @@ uenv image find pytorch
 ```
 
 > [!note]
-> The `pytorch:2.6` uenv is currently only deployed on `clariden`. It can be used on other clusters, but the vCluster of provenance needs to be specified explicitly: `uenv image find pytorch@clariden`. The provenance also needs to be specified when starting an uenv (either via `uenv start` or via the `--uenv` `srun`/`sbatch` options).
+> As of 2026-11, `pytorch/v2.6.0`, `v2.8.0` and `v2.9.1` are deployed on both `clariden` and `daint`. The examples below use `v2.9.1:v2`; check `uenv image find pytorch` for the current list. A plain venv on the shared filesystem scales badly to many ranks; see the CSCS guide on squashing Python virtual environments with uenv.
 
 Load the `pytorch` uenv, create a virtual environment, and install `metatrain`:
 ```bash
-uenv start --view=default pytorch/v2.6.0         # Load the PyTorch uenv
+uenv start --view=default pytorch/v2.9.1:v2        # Load the PyTorch uenv
 python -m venv --system-site-packages ./myenv    # Create a venv
 . myenv/bin/activate                             # Activate venv
 pip install metatrain
@@ -37,14 +37,15 @@ NCCL requires specific environment variables on Alps, to ensure that the high-sp
 #SBATCH --gpus-per-task=1
 #SBATCH --time=02:00:00
 #SBATCH --account=<ACCOUNT>
-#SBATCH --uenv=pytorch/v2.6.0:v1
+#SBATCH --uenv=pytorch/v2.9.1:v2
 #SBATCH --view=default
 
-set -x cat $0
+set -x
+cat "$0"
 
 export MASTER_PORT=25678
 export MASTER_ADDR=$(hostname)
-export WORLD_SIZE=$SLURM_NPROCS
+export WORLD_SIZE=$SLURM_NTASKS
 
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export TRITON_HOME="/dev/shm/"
@@ -62,10 +63,12 @@ export NCCL_NET_GDR_LEVEL=PHB
 export NCCL_CROSS_NIC=1
 # libfabric-related variables for best performance on Alps
 export FI_CXI_DEFAULT_CQ_SIZE=131072
-export FI_CXI_DEFAULT_TX_SIZE=32768
+export FI_CXI_DEFAULT_TX_SIZE=16384
 export FI_CXI_DISABLE_HOST_REGISTER=1
 export FI_CXI_RX_MATCH_MODE=software
 export FI_MR_CACHE_MONITOR=userfaultfd
+# NCCL >= 2.27 enables the LL128 protocol by default, which performs worse on Slingshot
+export NCCL_PROTO=^LL128
 
 srun -c ${SLURM_CPUS_PER_TASK} --cpu-bind=socket bash -c "
 export RANK=\$SLURM_PROCID
@@ -76,7 +79,7 @@ mtt train ${PWD}/options.yaml
 ```
 
 The `RANK` and `LOCAL_RANK` variables are set for each rank within the bash script run with `srun`.
-The combination of `--ntasks-per-node=4` and `--gpus-per-task=1` ensures that `CUDA_VISIBLE_DEVICES` is set appropriately for each rank: each of the 4 rank sees only one of the 4 GPUs available on one node.
+The combination of `--ntasks-per-node=4` and `--gpus-per-task=1` ensures that `CUDA_VISIBLE_DEVICES` is set appropriately for each rank: each of the 4 ranks sees only one of the 4 GPUs available on one node.
 
 > [!warning]
 > Always remember to activate the uenv when running. Most environment variables are required in order to obtain good scaling and good performance.
@@ -99,15 +102,15 @@ Once the container is built, one needs to use `enroot` to create a SquashFS file
 ```bash
 enroot import -x mount -o <SQUASHFS_IMAGE_NAME>.sqsh podman://<TAG>
 ```
-To use the container on Alps, and environment definition file (EDF) is required. An example is given below:
+To use the container on Alps, an environment definition file (EDF) is required. An example is given below:
 ```toml
 image = "/path/to/<SQUASHFS_IMAGE_NAME>.sqsh"
-mounts = ["/capstor", "/iopstor"]
+mounts = ["/capstor:/capstor", "/iopsstor:/iopsstor"]
 workdir = <WORKDIR>
 
 [annotations]
 com.hooks.aws_ofi_nccl.enabled = "true"
-com.hooks.aws_ofi_nccl.variant = "cuda12"
+com.hooks.aws_ofi_nccl.variant = "cuda-dl"
 
 [env]
 # NCCL_DEBUG = "INFO"
@@ -130,11 +133,12 @@ The following submission script allows to run `metatrain` installed within the c
 #SBATCH --time=02:00:00
 #SBATCH --account=<ACCOUNT>
 
-set -x cat $0
+set -x
+cat "$0"
 
 export MASTER_PORT=25678
 export MASTER_ADDR=$(hostname)
-export WORLD_SIZE=$SLURM_NPROCS
+export WORLD_SIZE=$SLURM_NTASKS
 export TORCH_NCCL_ASYNC_ERROR_HANDLING=1
 export TRITON_HOME="/dev/shm/"
 
