@@ -14,7 +14,7 @@ following the [Spack packaging guide].
 ## Recipes
 
 A [uenv recipe] is a collection of YAML files describing the uenv (compilers, libraries, applications, etc.).
-An uenv can be built from a recipe using [`stackinator`], or using the [uenv build serivice].
+An uenv can be built from a recipe using [`stackinator`], or using the [uenv build service].
 
 Uenv recipes for the metatensor ecosystem are available under
 
@@ -26,8 +26,8 @@ CSCS-Alps/uenv/
 
 To update a package version in an existing recipe, you need to do the following:
 
-1. [Optional] Update the `spack-package` version/commit in the `config.yaml` file,
-2. Update the version of the package in the `environment.yaml` file.
+1. [Optional] Update the `spack: packages: commit` in the `config.yaml` file,
+2. Update the version of the package in the `environments.yaml` file.
 
 The first step is only required if the version of interest has been added to Spack
 after the version/commit of `spack-packages` specified in the `config.yaml` file.
@@ -44,7 +44,7 @@ Custom Spack packages, overwriting the ones in Spack, can be added to
 
 ### Build uenv with build service
 
-Build an uenv from a recipe using the [uenv build serivice]:
+Build an uenv from a recipe using the [uenv build service]:
 
 ```bash
 git clone https://github.com/metatensor/hpc-docs
@@ -85,13 +85,13 @@ Build an uenv from a recipe using `stackinator`:
 ```bash
 git clone https://github.com/metatensor/hpc-docs
 cd hpc-docs
-stack-config --build /dev/shm/$USER/lmp-mta --recipe CSCS-Alps/uenv/lammps-metatomic -S $PWD/../alps-cluster-config/daint
+stack-config --build /dev/shm/$USER/lmp-mta --recipe CSCS-Alps/uenv/lammps-metatomic -s $PWD/../alps-cluster-config/daint
 ```
 
 It is recommended to build under `/dev/shm/$USER/`.
 The path to the cluster configuration should point to the correct cluster directory in the `alps-cluster-config` repository.
 
-If you are doing repeated builds (e.g., for testing different depencencies or development), 
+If you are doing repeated builds (e.g., for testing different dependencies or development), 
 you can [setup a local build cache]. `uenv build` automatically uses a build cache.
 
 ## Available recipes
@@ -100,7 +100,7 @@ you can [setup a local build cache]. `uenv build` automatically uses a build cac
 
 Recipe for building an uenv with LAMMPS and the `metatomic` package.
 The LAMMPS Spack package is a custom package, which uses [metatensor/LAMMPS],
-since the `metatomic` package is not yet available in the official LAMMPS distribution.
+since the `metatomic` package is not yet available in the official LAMMPS distribution (as of 2026-11).
 
 The main changes are the following:
 1. Changed `git` attribute to use `metatensor/LAMMPS`
@@ -115,8 +115,8 @@ The version of PyTorch provided by this uenv is non-distributed.
 [Spack]: https://spack.readthedocs.io/en/latest/
 [Spack packaging guide]: https://spack.readthedocs.io/en/latest/packaging_guide_creation.html#
 [`stackinator`]: https://eth-cscs.github.io/stackinator/
-[uenv build serivice]: https://docs.cscs.ch/software/uenv/build_service/
+[uenv build service]: https://docs.cscs.ch/software/uenv/build/#uenv-build-service
 [uenv recipe]: https://eth-cscs.github.io/stackinator/recipes/
 [Install `stackinator`]: https://eth-cscs.github.io/stackinator/#getting-stackinator
 [Alps cluster configuration]: https://github.com/eth-cscs/alps-cluster-config
-[setup a local build cache]: https://eth-cscs.github.io/stackinator/build-caches/
+[setup a local build cache]: https://eth-cscs.github.io/stackinator/mirrors/
